@@ -39,7 +39,6 @@ def test_same_category_replaces_old_part(session):
         [first.id, second.id],
     )
 
-  
     assert len(result) == 1
     assert result[0].id == second.id
 

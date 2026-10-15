@@ -1,11 +1,16 @@
 from datetime import datetime, timezone
 from enum import Enum
+
 from sqlmodel import Field, SQLModel
+
+
 class OrderStatus(str, Enum):
     RECEIVED = "received"
     ASSEMBLING = "assembling"
     READY = "ready"
     DELIVERED = "delivered"
+
+
 class Order(SQLModel, table=True):
     __tablename__ = "orders"
     id: int | None = Field(default=None, primary_key=True)
