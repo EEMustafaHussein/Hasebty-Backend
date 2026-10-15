@@ -1,4 +1,6 @@
 from pydantic import BaseModel, Field
+
+
 class PartCreate(BaseModel):
     category_id: int
     name: str = Field(min_length=1)
@@ -9,5 +11,7 @@ class PartCreate(BaseModel):
     form_factor: str | None = None
     wattage: int | None = Field(default=None, ge=0)
     specs: str | None = None
+
+
 class PartPublic(PartCreate):
     id: int

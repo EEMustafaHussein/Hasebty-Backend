@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 
+
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=1)
 
@@ -13,7 +14,6 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-
     phone: str = Field(
         min_length=11,
         max_length=11,
@@ -22,11 +22,13 @@ class LoginRequest(BaseModel):
 
     password: str
 
+
 class UserPublic(BaseModel):
     id: int
     name: str
     phone: str
     role: str
+
 
 class TokenResponse(BaseModel):
     access_token: str

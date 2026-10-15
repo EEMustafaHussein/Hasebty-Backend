@@ -1,7 +1,16 @@
+from typing import Any
+
 from sqlmodel import Session, select
-from app.database import engine, create_db_and_tables
-from app.models import Category, Part, User, UserRole
+
 from app.auth.security import hash_password
+from app.database import create_db_and_tables, engine
+from app.models import Category, Part, User, UserRole
+from app.utils import require_id
+
+STAFF_PHONE = "07700000000"
+STAFF_PASSWORD = "Staff123!"
+
+OLD_STAFF_PHONE = "0770000000"
 
 categories_data = [
     "CPU",
@@ -14,7 +23,7 @@ categories_data = [
     "CPU Cooler",
 ]
 
-parts_data = [
+parts_data: list[dict[str, Any]] = [
     {
         "category": "CPU",
         "name": "AMD Ryzen 5 5600",
@@ -405,7 +414,6 @@ parts_data = [
         "stock": 4,
         "specs": "240mm AIO",
     },
-   
     {
         "category": "GPU",
         "name": "NVIDIA RTX 4080",
@@ -423,17 +431,15 @@ parts_data = [
     },
 ]
 
-def seed_database():
+
+def seed_database() -> None:
     create_db_and_tables()
 
     with Session(engine) as session:
-
-    
-        category_map = {}
+        category_map: dict[str, Category] = {}
 
         for category_name in categories_data:
-            category = session.exec(
-                select(Category).where(Category.name == category_name)).first()
+            category = session.exec(select(Category).where(Category.name == category_name)).first()
 
             if not category:
                 category = Category(name=category_name)
@@ -443,12 +449,10 @@ def seed_database():
 
             category_map[category_name] = category
 
-        
         added_parts = 0
 
         for part_data in parts_data:
-            existing_part = session.exec(
-                select(Part).where(Part.name == part_data["name"])).first()
+            existing_part = session.exec(select(Part).where(Part.name == part_data["name"])).first()
 
             if existing_part:
                 continue
@@ -457,7 +461,7 @@ def seed_database():
             part_fields = {key: value for key, value in part_data.items() if key != "category"}
 
             part = Part(
-                category_id=category_map[category_name].id,
+                category_id=require_id(category_map[category_name].id),
                 **part_fields,
             )
 
@@ -466,34 +470,38 @@ def seed_database():
 
         session.commit()
 
-        
-        staff_phone = "0770000000"
+        staff = session.exec(select(User).where(User.phone == STAFF_PHONE)).first()
+        old_staff = session.exec(select(User).where(User.phone == OLD_STAFF_PHONE)).first()
 
-        existing_staff = session.exec(
-            select(User).where(User.phone == staff_phone)
-        ).first()
-
-        if existing_staff:
-            existing_staff.role = UserRole.STAFF
-            session.add(existing_staff)
+        if staff is None and old_staff is not None:
+            old_staff.phone = STAFF_PHONE
+            old_staff.role = UserRole.STAFF
+            session.add(old_staff)
+            session.commit()
+            print("Demo staff phone fixed (10 digits -> 11 digits).")
+        elif staff is not None:
+            staff.role = UserRole.STAFF
+            session.add(staff)
             session.commit()
             print("Demo staff account already exists.")
         else:
-            staff = User(
-                name="Demo Staff",
-                phone=staff_phone,
-                password_hash=hash_password("Staff123!"),
-                role=UserRole.STAFF,
+            session.add(
+                User(
+                    name="Demo Staff",
+                    phone=STAFF_PHONE,
+                    password_hash=hash_password(STAFF_PASSWORD),
+                    role=UserRole.STAFF,
+                )
             )
-            session.add(staff)
             session.commit()
             print("Demo staff account created successfully.")
 
         print("Seed completed successfully!")
         print(f"Categories: {len(category_map)}")
         print(f"Parts added: {added_parts}")
-        print("Demo staff phone: 0770000000")
-        print("Demo staff password: Staff123!")
+        print(f"Demo staff phone: {STAFF_PHONE}")
+        print(f"Demo staff password: {STAFF_PASSWORD}")
+
 
 if __name__ == "__main__":
     seed_database()

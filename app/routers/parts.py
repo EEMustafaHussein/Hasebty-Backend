@@ -1,68 +1,40 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.auth.dependency import require_role
 from app.database import get_session
 from app.models import Category, Part, User, UserRole
-from app.schemas.part import PartCreate, PartPublic
+from app.responses import PageParams, page_params, paginated, success
+from app.schemas.part import PartCreate
+from app.services.part_service import list_parts, part_to_public
 
 router = APIRouter(prefix="/parts", tags=["Parts"])
-
-
-def to_public(part: Part) -> PartPublic:
-    return PartPublic(
-        id=part.id,
-        category_id=part.category_id,
-        name=part.name,
-        price=part.price,
-        stock=part.stock,
-        socket=part.socket,
-        ram_type=part.ram_type,
-        form_factor=part.form_factor,
-        wattage=part.wattage,
-        specs=part.specs,
-    )
 
 
 @router.get("")
 def get_parts(
     category: str | None = None,
+    search: str | None = None,
+    in_stock: bool | None = None,
+    params: PageParams = Depends(page_params),
     session: Session = Depends(get_session),
-):
-    query = select(Part).order_by(Part.id)
-
-    if category:
-        category_obj = session.exec(
-            select(Category).where(Category.name.ilike(category))
-        ).first()
-        if category_obj is None:
-            return {
-                "success": True,
-                "data": [],
-                "message": "Parts retrieved successfully",
-            }
-        query = query.where(Part.category_id == category_obj.id)
-
-    parts = session.exec(query).all()
-
-    return {
-        "success": True,
-        "data": [to_public(part) for part in parts],
-        "message": "Parts retrieved successfully",
-    }
+) -> dict[str, Any]:
+    """List parts. `category` can be a category name (CPU) or id. Paginated with page/limit."""
+    parts, total = list_parts(session, params, category, search, in_stock)
+    return paginated(
+        [part_to_public(p) for p in parts], total, params, "Parts retrieved successfully"
+    )
 
 
 @router.get("/{part_id}")
-def get_part(part_id: int, session: Session = Depends(get_session)):
+def get_part(part_id: int, session: Session = Depends(get_session)) -> dict[str, Any]:
     part = session.get(Part, part_id)
     if part is None:
         raise HTTPException(status_code=404, detail="Part not found")
 
-    return {
-        "success": True,
-        "data": to_public(part),
-        "message": "Part retrieved successfully",
-    }
+    return success(part_to_public(part), "Part retrieved successfully")
 
 
 @router.post("", status_code=201)
@@ -70,7 +42,7 @@ def create_part(
     data: PartCreate,
     session: Session = Depends(get_session),
     _: User = Depends(require_role(UserRole.STAFF)),
-):
+) -> dict[str, Any]:
     if session.get(Category, data.category_id) is None:
         raise HTTPException(status_code=404, detail="Category not found")
 
@@ -79,11 +51,7 @@ def create_part(
     session.commit()
     session.refresh(part)
 
-    return {
-        "success": True,
-        "data": to_public(part),
-        "message": "Part created successfully",
-    }
+    return success(part_to_public(part), "Part created successfully")
 
 
 @router.put("/{part_id}")
@@ -92,7 +60,7 @@ def update_part(
     data: PartCreate,
     session: Session = Depends(get_session),
     _: User = Depends(require_role(UserRole.STAFF)),
-):
+) -> dict[str, Any]:
     part = session.get(Part, part_id)
     if part is None:
         raise HTTPException(status_code=404, detail="Part not found")
@@ -107,8 +75,4 @@ def update_part(
     session.commit()
     session.refresh(part)
 
-    return {
-        "success": True,
-        "data": to_public(part),
-        "message": "Part updated successfully",
-    }
+    return success(part_to_public(part), "Part updated successfully")
