@@ -1,4 +1,6 @@
 from sqlmodel import Field, SQLModel
+
+
 class Part(SQLModel, table=True):
     __tablename__ = "parts"
     id: int | None = Field(default=None, primary_key=True)

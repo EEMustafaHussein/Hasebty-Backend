@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
+
 from app.auth.security import (
     create_access_token,
     hash_password,
@@ -21,10 +22,8 @@ def register(
     user_data: RegisterRequest,
     session: Session = Depends(get_session),
 ):
-  
-    existing_user = session.exec(
-        select(User).where(User.phone == user_data.phone)
-    ).first()
+
+    existing_user = session.exec(select(User).where(User.phone == user_data.phone)).first()
 
     if existing_user:
         raise HTTPException(
@@ -60,10 +59,8 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: Session = Depends(get_session),
 ):
- 
-    user = session.exec(
-        select(User).where(User.phone == form_data.username)
-    ).first()
+
+    user = session.exec(select(User).where(User.phone == form_data.username)).first()
 
     if user is None or not verify_password(
         form_data.password,

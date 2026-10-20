@@ -1,4 +1,4 @@
-# Hasebty Backend — Week 1
+# Hasebty Backend — Weeks 1-2
 
 FastAPI REST API for Team 10 Hasebty.
 
@@ -53,13 +53,37 @@ http://127.0.0.1:8000/docs
 The seed creates a staff account for local testing:
 
 ```text
-phone: 0770000000
+phone: 07700000000
 password: Staff123!
 ```
 
 Change/remove this demo credential before real deployment.
 
-## Week 1 API contract
+## Week 2 scope
+
+- Parts endpoints with filters (`category` name or id, `search`, `in_stock`) and pagination.
+- Builds endpoints: `POST /builds`, `GET /builds/{id}`, `PUT /builds/{id}`, `GET /me/builds`.
+- Build total price is always calculated by the API (`total` in every build response and in
+  `/builds/{id}/check`). If staff change a price, saved builds show the new total.
+- Pagination on long lists: `?page=1&limit=50` (limit max 100). The response keeps the same shape
+  and adds `meta: {page, limit, total}`.
+- Validation errors (422) return `errors` as `{ "field": "message" }`.
+
+## Tests, lint and types
+
+```bash
+pytest          # uses an in-memory SQLite database, never your PostgreSQL one
+ruff check .
+ruff format --check .
+mypy app seed.py
+```
+
+## Login note for the apps
+
+`POST /auth/login` uses the OAuth2 form (`application/x-www-form-urlencoded`). Send the phone number
+in the `username` field and the `password` field.
+
+## API contract
 
 ### Public
 
@@ -69,13 +93,15 @@ Change/remove this demo credential before real deployment.
 
 - `GET /categories`
 
-- `GET /parts`
+- `GET /parts?category=&search=&in_stock=&page=&limit=`
 
 - `GET /parts/{id}`
 
 ### Customer
 
 - `POST /builds`
+
+- `GET /builds/{id}`
 
 - `PUT /builds/{id}`
 
@@ -128,3 +154,19 @@ Error:
   "errors": {}
 }
 ```
+## Run with Docker
+
+```bash
+docker compose up --build
+```
+
+- API: http://localhost:8000 and docs at http://localhost:8000/docs
+- PostgreSQL runs in its own container and its data is kept in the `pgdata` volume.
+- The seed runs automatically on every start (demo staff `07700000000` / `Staff123!`).
+- Optional: copy `.env.example` to `.env` to change the database password or `SECRET_KEY`.
+- Stop: `docker compose down` (add `-v` to also delete the database data).
+
+## Future ideas
+
+- Prices from several stores for the same part (new `stores` and `store_prices` tables), so the
+  customer can compare and choose where to buy.
