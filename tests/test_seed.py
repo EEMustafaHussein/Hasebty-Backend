@@ -28,11 +28,11 @@ def test_seed_is_safe_to_run_twice(seeded: Session) -> None:
     seed.seed_database()
 
     assert len(seeded.exec(select(Part)).all()) == 50
-    assert len(seeded.exec(select(User)).all()) == 1
+    assert len(seeded.exec(select(User)).all()) == 2
 
 
 def test_staff_phone_has_11_digits_like_the_register_rule(seeded: Session) -> None:
-    staff = seeded.exec(select(User)).one()
+    staff = seeded.exec(select(User).where(User.role == UserRole.STAFF)).one()
 
     assert staff.role == UserRole.STAFF
     assert staff.phone == "07700000000"
@@ -40,19 +40,19 @@ def test_staff_phone_has_11_digits_like_the_register_rule(seeded: Session) -> No
 
 
 def test_old_10_digit_staff_account_is_fixed(seeded: Session) -> None:
-    staff = seeded.exec(select(User)).one()
+    staff = seeded.exec(select(User).where(User.role == UserRole.STAFF)).one()
     staff.phone = seed.OLD_STAFF_PHONE
     seeded.add(staff)
     seeded.commit()
 
     seed.seed_database()
 
-    users = seeded.exec(select(User)).all()
-    assert [u.phone for u in users] == ["07700000000"]
+    staff_users = seeded.exec(select(User).where(User.role == UserRole.STAFF)).all()
+    assert [u.phone for u in staff_users] == ["07700000000"]
 
 
 def test_seeded_staff_can_log_in(seeded: Session, client: TestClient) -> None:
-    # `client` uses its own test database, so log in against the seeded one explicitly.
+
     from app.database import get_session
     from app.main import app
 
@@ -63,6 +63,25 @@ def test_seeded_staff_can_log_in(seeded: Session, client: TestClient) -> None:
         )
     finally:
         app.dependency_overrides.clear()
-
     assert response.status_code == 200
     assert response.json()["data"]["role"] == "staff"
+
+
+def test_seeded_customer_can_log_in_and_save_a_build(seeded: Session) -> None:
+    from app.database import get_session
+    from app.main import app
+
+    app.dependency_overrides[get_session] = lambda: seeded
+    try:
+        client = TestClient(app)
+        login = client.post(
+            "/auth/login",
+            data={"username": seed.CUSTOMER_PHONE, "password": seed.CUSTOMER_PASSWORD},
+        )
+        headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
+        build = client.post("/builds", json={"name": "Demo", "part_ids": [1]}, headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert login.json()["data"]["role"] == "customer"
+    assert build.status_code == 201

@@ -3,7 +3,12 @@ from sqlmodel import Session
 
 from app.models import Order, OrderStatus, User
 from app.schemas.order import OrderPublic
-from app.services.build_service import calculate_total, get_build_parts, get_owned_build
+from app.services.build_service import (
+    calculate_total,
+    get_build_parts,
+    get_build_warnings,
+    get_owned_build,
+)
 from app.utils import require_id
 
 STATUS_ORDER = {
@@ -32,7 +37,13 @@ def create_order(session: Session, user: User, build_id: int) -> Order:
     if not parts:
         raise HTTPException(status_code=400, detail="An empty build cannot be ordered")
 
-    # Business rule 8: a part with zero stock cannot be ordered.
+    warnings = get_build_warnings(session, require_id(build.id))
+    if warnings:
+        raise HTTPException(
+            status_code=400,
+            detail="This build has compatibility problems: " + "; ".join(warnings),
+        )
+
     if any(part.stock <= 0 for part in parts):
         raise HTTPException(status_code=400, detail="A part with zero stock cannot be ordered")
 
@@ -52,7 +63,6 @@ def change_status(session: Session, order_id: int, new_status: OrderStatus) -> O
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # Business rule 9: the status only moves forward.
     if STATUS_ORDER[new_status] < STATUS_ORDER[order.status]:
         raise HTTPException(status_code=400, detail="Order status can only move forward")
 

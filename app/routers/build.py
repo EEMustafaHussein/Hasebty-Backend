@@ -54,13 +54,9 @@ def check_build(
     session: Session = Depends(get_session),
 ) -> dict[str, Any]:
     build = build_service.get_owned_build(session, build_id, current_user)
-
     parts = build_service.get_build_parts(session, require_id(build.id))
     total = build_service.calculate_total(parts)
-
-    # Compatibility rules (2-5) are Week 3 work. The endpoint already exists so the
-    # mobile team can build against the agreed shape.
-    warnings: list[str] = []
+    warnings = build_service.get_build_warnings(session, require_id(build.id))
 
     return success(
         BuildCheckPublic(build_id=require_id(build.id), warnings=warnings, total=total),
