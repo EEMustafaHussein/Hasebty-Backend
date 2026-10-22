@@ -7,10 +7,9 @@ from app.auth.dependency import require_role
 from app.database import get_session
 from app.models import User, UserRole
 from app.responses import success
-from app.schemas.build import BuildCheckPublic, BuildCreate
+from app.schemas.build import BuildCreate
 from app.services import build_service
 from app.services.build_service import build_to_public
-from app.utils import require_id
 
 router = APIRouter(prefix="/builds", tags=["Builds"])
 
@@ -54,15 +53,4 @@ def check_build(
     session: Session = Depends(get_session),
 ) -> dict[str, Any]:
     build = build_service.get_owned_build(session, build_id, current_user)
-
-    parts = build_service.get_build_parts(session, require_id(build.id))
-    total = build_service.calculate_total(parts)
-
-    # Compatibility rules (2-5) are Week 3 work. The endpoint already exists so the
-    # mobile team can build against the agreed shape.
-    warnings: list[str] = []
-
-    return success(
-        BuildCheckPublic(build_id=require_id(build.id), warnings=warnings, total=total),
-        "Build checked successfully",
-    )
+    return success(build_service.check_build(session, build), "Build checked successfully")

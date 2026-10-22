@@ -1,4 +1,4 @@
-# Hasebty Backend — Weeks 1-2
+# Hasebty Backend — Weeks 1-3
 
 FastAPI REST API for Team 10 Hasebty.
 
@@ -69,6 +69,18 @@ Change/remove this demo credential before real deployment.
   and adds `meta: {page, limit, total}`.
 - Validation errors (422) return `errors` as `{ "field": "message" }`.
 
+## Week 3 scope
+
+- Compatibility checks live in `app/services/compatibility_service.py`. `GET /builds/{id}/check`
+  returns one message per problem in `warnings` (an empty list means the build is fine):
+  - Rule 2: the CPU socket must match the motherboard socket.
+  - Rule 3: the RAM type must match the motherboard.
+  - Rule 4: the motherboard must fit the case (Mini-ITX < mATX < ATX).
+  - Rule 5: the PSU must give at least 20% more watts than the other parts use.
+- A rule is only checked when the build has both parts it needs.
+- Rule 6: `POST /orders` refuses a build with any warning (`400`).
+- CI (`.github/workflows/ci.yml`) runs Ruff, Ruff format, MyPy and pytest on every pull request.
+
 ## Tests, lint and types
 
 ```bash
@@ -125,7 +137,7 @@ in the `username` field and the `password` field.
 
 - `GET /reports/stats`
 
-The compatibility rules (CPU/socket, RAM/motherboard, motherboard/case, PSU margin) are Week 3 work. The `/builds/{id}/check` endpoint already exists as part of the Week 1 API contract so the mobile team can integrate against the agreed shape.
+The compatibility rules (CPU/socket, RAM/motherboard, motherboard/case, PSU margin) are described in the Week 3 scope above. `/builds/{id}/check` keeps the agreed shape: `build_id`, `warnings`, `total`.
 
 The agreed **PSU safety margin is 20%**. The selected PSU should provide at least 20% more power than the estimated total system consumption.
 

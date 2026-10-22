@@ -1,8 +1,9 @@
 from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
-from app.models import Build, BuildPart, Part, User
-from app.schemas.build import BuildPublic
+from app.models import Build, BuildPart, Category, Part, User
+from app.schemas.build import BuildCheckPublic, BuildPublic
+from app.services.compatibility_service import find_problems
 from app.services.part_service import part_to_public
 from app.utils import require_id
 
@@ -102,5 +103,25 @@ def build_to_public(session: Session, build: Build) -> BuildPublic:
         created_at=build.created_at,
         part_ids=[require_id(part.id) for part in parts],
         parts=[part_to_public(part) for part in parts],
+        total=calculate_total(parts),
+    )
+
+
+def parts_by_category_name(session: Session, parts: list[Part]) -> dict[str, Part]:
+    """{"CPU": part, "Motherboard": part, ...} so each rule can find the part it needs."""
+    result: dict[str, Part] = {}
+    for part in parts:
+        category = session.get(Category, part.category_id)
+        if category is not None:
+            result[category.name] = part
+    return result
+
+
+def check_build(session: Session, build: Build) -> BuildCheckPublic:
+    """Rules 2-5 (warnings) and rule 7 (total). Used by /builds/{id}/check and by ordering."""
+    parts = get_build_parts(session, require_id(build.id))
+    return BuildCheckPublic(
+        build_id=require_id(build.id),
+        warnings=find_problems(parts_by_category_name(session, parts)),
         total=calculate_total(parts),
     )
