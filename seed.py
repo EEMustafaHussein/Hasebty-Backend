@@ -9,9 +9,9 @@ from app.utils import require_id
 
 STAFF_PHONE = "07700000000"
 STAFF_PASSWORD = "Staff123!"
-
+CUSTOMER_PHONE = "07711111111"
+CUSTOMER_PASSWORD = "Customer123!"
 OLD_STAFF_PHONE = "0770000000"
-
 categories_data = [
     "CPU",
     "GPU",
@@ -496,11 +496,28 @@ def seed_database() -> None:
             session.commit()
             print("Demo staff account created successfully.")
 
+        customer = session.exec(select(User).where(User.phone == CUSTOMER_PHONE)).first()
+        if customer is None:
+            session.add(
+                User(
+                    name="Demo Customer",
+                    phone=CUSTOMER_PHONE,
+                    password_hash=hash_password(CUSTOMER_PASSWORD),
+                    role=UserRole.CUSTOMER,
+                )
+            )
+            session.commit()
+            print("Demo customer account created successfully.")
+        else:
+            print("Demo customer account already exists.")
+
         print("Seed completed successfully!")
         print(f"Categories: {len(category_map)}")
         print(f"Parts added: {added_parts}")
         print(f"Demo staff phone: {STAFF_PHONE}")
         print(f"Demo staff password: {STAFF_PASSWORD}")
+        print(f"Demo customer phone: {CUSTOMER_PHONE}")
+        print(f"Demo customer password: {CUSTOMER_PASSWORD}")
 
 
 if __name__ == "__main__":

@@ -17,8 +17,8 @@ class BuildPublic(BaseModel):
     created_at: datetime
     part_ids: list[int] = []
     parts: list[PartPublic] = []
-    # Always calculated by the API from the current part prices.
     total: float = 0
+    warnings: list[str] = []
 
 
 class BuildCheckPublic(BaseModel):
