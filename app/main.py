@@ -19,6 +19,7 @@ from app.routers.me import router as me_router
 from app.routers.orders import router as orders_router
 from app.routers.parts import router as parts_router
 from app.routers.reports import router as reports_router
+from app.services.image_service import upload_root
 
 
 @asynccontextmanager
@@ -44,6 +45,10 @@ app.include_router(reports_router)
 
 # Part pictures (app/static/parts/*.png) are served at /static/parts/...
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+
+# Pictures that staff upload from the dashboard are served at /uploads/parts/...
+upload_root().mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=upload_root()), name="uploads")
 
 
 @app.exception_handler(StarletteHTTPException)

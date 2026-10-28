@@ -139,3 +139,73 @@ def test_an_old_database_gets_the_new_column() -> None:
     add_missing_columns(engine)
 
     assert "image_url" in {column["name"] for column in inspect(engine).get_columns("parts")}
+
+
+# ---------- uploads from the dashboard ----------
+
+PNG = (APP_DIR / "static" / "parts" / "cpu.png").read_bytes()
+
+
+def ryzen_id(session: Session) -> int:
+    return session.exec(select(Part).where(Part.name == "Ryzen 5 5600")).one().id or 0
+
+
+def upload(client: TestClient, part_id: int, data: bytes, headers: dict[str, str]):  # type: ignore[no-untyped-def]
+    files = {"file": ("photo.png", data, "image/png")}
+    return client.post(f"/parts/{part_id}/image", files=files, headers=headers)
+
+
+def test_staff_can_upload_a_picture(
+    client: TestClient, session: Session, staff: dict[str, str]
+) -> None:
+    part_id = ryzen_id(session)
+
+    response = upload(client, part_id, PNG, staff)
+
+    assert response.status_code == 200
+    image_url = response.json()["data"]["image_url"]
+    assert f"/uploads/parts/part-{part_id}-" in image_url
+    served = client.get(image_url[image_url.index("/uploads/") :])
+    assert served.status_code == 200
+    assert served.content == PNG
+
+
+def test_a_new_upload_replaces_the_old_file(
+    client: TestClient, session: Session, staff: dict[str, str]
+) -> None:
+    part_id = ryzen_id(session)
+    first = upload(client, part_id, PNG, staff).json()["data"]["image_url"]
+
+    second = upload(client, part_id, PNG, staff).json()["data"]["image_url"]
+
+    assert first != second
+    assert client.get(first[first.index("/uploads/") :]).status_code == 404
+    assert client.get(second[second.index("/uploads/") :]).status_code == 200
+
+
+def test_upload_must_be_a_real_picture(
+    client: TestClient, session: Session, staff: dict[str, str]
+) -> None:
+    response = upload(client, ryzen_id(session), b"<script>alert(1)</script>", staff)
+
+    assert response.status_code == 422
+    assert response.json()["success"] is False
+
+
+def test_upload_must_not_be_too_big(
+    client: TestClient, session: Session, staff: dict[str, str]
+) -> None:
+    too_big = PNG[:8] + b"0" * (2 * 1024 * 1024)
+
+    assert upload(client, ryzen_id(session), too_big, staff).status_code == 422
+
+
+def test_only_staff_can_upload(
+    client: TestClient, session: Session, customer: dict[str, str]
+) -> None:
+    assert upload(client, ryzen_id(session), PNG, customer).status_code == 403
+    assert client.post(f"/parts/{ryzen_id(session)}/image").status_code == 401
+
+
+def test_upload_to_an_unknown_part_is_404(client: TestClient, staff: dict[str, str]) -> None:
+    assert upload(client, 9999, PNG, staff).status_code == 404

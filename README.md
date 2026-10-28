@@ -192,8 +192,13 @@ They live in `app/services/compatibility.py` as plain functions (no database, no
   picture on our server such as `/static/parts/cpu.png`.
 - The API serves 8 category pictures from `app/static/parts/` at `/static/parts/<name>.png`.
   `python seed.py` gives every sample part the picture of its category (existing parts too).
+- Staff upload a picture from the dashboard with `POST /parts/{id}/image` (multipart form,
+  field `file`, PNG/JPG/WEBP, max 2 MB). It replaces the part's old uploaded picture.
+  Files are saved in `UPLOAD_DIR` (default: `uploads/` in the project) and served at
+  `/uploads/parts/...`. On the server this folder must be a volume and part of the daily backup.
 - Set `PUBLIC_BASE_URL` to the API's public address (for example `https://api.example.com`) so
-  `/static/...` paths are returned as full links. Without it the response keeps the path.
+  `/static/...` and `/uploads/...` paths are returned as full links. Without it the response
+  keeps the path.
 - Existing databases get the new column automatically when the API starts
   (`add_missing_columns` in `app/database.py`).
 

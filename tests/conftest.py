@@ -1,7 +1,11 @@
 import os
+import tempfile
 
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
+# Uploaded pictures go to a temporary folder that is removed when the tests finish.
+UPLOADS = tempfile.TemporaryDirectory(prefix="hasebty-uploads-")
+os.environ["UPLOAD_DIR"] = UPLOADS.name
 
 from collections.abc import Iterator  # noqa: E402
 

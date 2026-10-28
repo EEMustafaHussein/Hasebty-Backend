@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlmodel import Session
 
 from app.auth.dependency import require_role
@@ -8,6 +8,7 @@ from app.database import get_session
 from app.models import Category, Part, User, UserRole
 from app.responses import PageParams, page_params, paginated, success
 from app.schemas.part import PartCreate
+from app.services.image_service import delete_uploaded_image, save_part_image
 from app.services.part_service import list_parts, part_to_public
 
 router = APIRouter(prefix="/parts", tags=["Parts"])
@@ -76,3 +77,25 @@ def update_part(
     session.refresh(part)
 
     return success(part_to_public(part), "Part updated successfully")
+
+
+@router.post("/{part_id}/image")
+def upload_part_image(
+    part_id: int,
+    file: UploadFile,
+    session: Session = Depends(get_session),
+    _: User = Depends(require_role(UserRole.STAFF)),
+) -> dict[str, Any]:
+    """Staff upload a picture for one part from the dashboard (multipart form, field `file`)."""
+    part = session.get(Part, part_id)
+    if part is None:
+        raise HTTPException(status_code=404, detail="Part not found")
+
+    old_image = part.image_url
+    part.image_url = save_part_image(part_id, file)
+    session.add(part)
+    session.commit()
+    session.refresh(part)
+    delete_uploaded_image(old_image)
+
+    return success(part_to_public(part), "Part image uploaded successfully")
