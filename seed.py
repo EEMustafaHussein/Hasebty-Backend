@@ -23,6 +23,18 @@ categories_data = [
     "CPU Cooler",
 ]
 
+# One picture per category, served by the API from app/static/parts/.
+CATEGORY_IMAGES = {
+    "CPU": "/static/parts/cpu.png",
+    "GPU": "/static/parts/gpu.png",
+    "Motherboard": "/static/parts/motherboard.png",
+    "RAM": "/static/parts/ram.png",
+    "Storage": "/static/parts/storage.png",
+    "PSU": "/static/parts/psu.png",
+    "Case": "/static/parts/case.png",
+    "CPU Cooler": "/static/parts/cpu-cooler.png",
+}
+
 parts_data: list[dict[str, Any]] = [
     {
         "category": "CPU",
@@ -454,11 +466,19 @@ def seed_database() -> None:
         for part_data in parts_data:
             existing_part = session.exec(select(Part).where(Part.name == part_data["name"])).first()
 
+            # A part's own picture wins; otherwise it gets the picture of its category.
+            image_url = part_data.get("image_url") or CATEGORY_IMAGES.get(part_data["category"])
+
             if existing_part:
+                # Parts created before pictures existed get one now.
+                if image_url and not existing_part.image_url:
+                    existing_part.image_url = image_url
+                    session.add(existing_part)
                 continue
 
             category_name = part_data["category"]
             part_fields = {key: value for key, value in part_data.items() if key != "category"}
+            part_fields["image_url"] = image_url
 
             part = Part(
                 category_id=require_id(category_map[category_name].id),

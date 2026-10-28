@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
@@ -5,6 +7,13 @@ from app.models import Category, Part
 from app.responses import PageParams
 from app.schemas.part import PartPublic
 from app.utils import require_id
+
+
+def image_link(image_url: str | None) -> str | None:
+    """A picture on our own server (/static/...) becomes a full link the apps can open."""
+    if image_url and image_url.startswith("/"):
+        return os.getenv("PUBLIC_BASE_URL", "").rstrip("/") + image_url
+    return image_url
 
 
 def part_to_public(part: Part) -> PartPublic:
@@ -19,6 +28,7 @@ def part_to_public(part: Part) -> PartPublic:
         form_factor=part.form_factor,
         wattage=part.wattage,
         specs=part.specs,
+        image_url=image_link(part.image_url),
     )
 
 

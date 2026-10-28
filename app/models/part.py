@@ -13,3 +13,4 @@ class Part(SQLModel, table=True):
     form_factor: str | None = None
     wattage: int | None = None
     specs: str | None = None
+    image_url: str | None = None

@@ -185,6 +185,18 @@ They live in `app/services/compatibility.py` as plain functions (no database, no
 - Rule 6: `POST /orders` for a build with any warning returns **400** with the warnings in the message.
 - Estimated consumption = the `wattage` of every part except the PSU (CPU and GPU in the sample data).
 
+## Part images
+
+- Every part has an optional `image_url`, returned by `GET /parts` and `GET /parts/{id}` as a full
+  link (or `null`). Staff set it with `POST /parts` and `PUT /parts/{id}`: an `https://` link, or a
+  picture on our server such as `/static/parts/cpu.png`.
+- The API serves 8 category pictures from `app/static/parts/` at `/static/parts/<name>.png`.
+  `python seed.py` gives every sample part the picture of its category (existing parts too).
+- Set `PUBLIC_BASE_URL` to the API's public address (for example `https://api.example.com`) so
+  `/static/...` paths are returned as full links. Without it the response keeps the path.
+- Existing databases get the new column automatically when the API starts
+  (`add_missing_columns` in `app/database.py`).
+
 ## CI
 
 `.github/workflows/ci.yml` runs Ruff, MyPy and pytest on every pull request. It needs no

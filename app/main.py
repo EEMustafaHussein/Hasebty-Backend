@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -7,6 +8,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.database import create_db_and_tables
@@ -39,6 +41,9 @@ app.include_router(builds_router)
 app.include_router(me_router)
 app.include_router(orders_router)
 app.include_router(reports_router)
+
+# Part pictures (app/static/parts/*.png) are served at /static/parts/...
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
 
 @app.exception_handler(StarletteHTTPException)

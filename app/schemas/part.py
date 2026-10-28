@@ -11,6 +11,7 @@ class PartCreate(BaseModel):
     form_factor: str | None = None
     wattage: int | None = Field(default=None, ge=0)
     specs: str | None = None
+    image_url: str | None = Field(default=None, max_length=500, pattern=r"^(https?://|/static/)")
 
 
 class PartPublic(PartCreate):
