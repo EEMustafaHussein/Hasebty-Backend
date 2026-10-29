@@ -26,6 +26,8 @@ def add_missing_columns(bind: Engine) -> None:
     for table, columns in NEW_COLUMNS.items():
         if not inspector.has_table(table):
             continue
+        # Read the columns the table already has and add only the missing ones,
+        # so starting the server again (and again) changes nothing.
         existing = {column["name"] for column in inspector.get_columns(table)}
         for name, sql_type in columns.items():
             if name not in existing:

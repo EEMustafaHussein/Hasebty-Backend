@@ -141,6 +141,21 @@ def test_an_old_database_gets_the_new_column() -> None:
     assert "image_url" in {column["name"] for column in inspect(engine).get_columns("parts")}
 
 
+def test_starting_again_does_not_add_the_column_twice() -> None:
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE parts (id INTEGER PRIMARY KEY, name VARCHAR)"))
+
+    add_missing_columns(engine)  # first start: the column is added
+    add_missing_columns(engine)  # server stopped and started again: nothing to add
+    add_missing_columns(engine)
+
+    names = [column["name"] for column in inspect(engine).get_columns("parts")]
+    assert names.count("image_url") == 1
+
+
 # ---------- uploads from the dashboard ----------
 
 PNG = (APP_DIR / "static" / "parts" / "cpu.png").read_bytes()
